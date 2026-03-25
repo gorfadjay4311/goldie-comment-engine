@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goldie Bro - Comment Engine</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;overflow:hidden;height:100vh;background:var(--bg-base);color:var(--text-1)}
+a{color:var(--gold);text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
+textarea,input,select{font-family:inherit;font-size:inherit;color:var(--text-1);
+  background:var(--bg-3);border:1px solid var(--border-1);border-radius:10px;padding:10px 14px;outline:none;
+  transition:border-color .2s,box-shadow .2s}
+textarea:focus,input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-glow)}
+textarea{resize:vertical}
+::selection{background:var(--gold-glow);color:var(--gold)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-1);border-radius:4px}
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════ */
+[data-theme="dark"]{
+  --bg-base:#06060a;
+  --bg-1:#0c0c12;
+  --bg-2:#111118;
+  --bg-3:#17171f;
+  --bg-4:#1e1e28;
+  --bg-hover:#252530;
+
+  --border-0:#14141c;
+  --border-1:#222230;
+  --border-2:#333340;
+
+  --text-1:#eeeef0;
+  --text-2:#9898a6;
+  --text-3:#5e5e70;
+
+  --gold:#f5a623;
+  --gold-dim:#c4841c;
+  --gold-glow:rgba(245,166,35,.14);
+  --gold-text:#fbbf24;
+
+  --green:#34d399;--green-bg:rgba(52,211,153,.1);
+  --red:#f87171;--red-bg:rgba(248,113,113,.1);
+  --blue:#60a5fa;--blue-bg:rgba(96,165,250,.1);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,.1);
+  --cyan:#22d3ee;--cyan-bg:rgba(34,211,238,.1);
+  --pink:#f472b6;--pink-bg:rgba(244,114,182,.1);
+  --orange:#fb923c;--orange-bg:rgba(251,146,60,.1);
+  --yellow:#facc15;--yellow-bg:rgba(250,204,21,.1);
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,.5);
+  --shadow-md:0 4px 12px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.6);
+}
+[data-theme="light"]{
+  --bg-base:#f5f5f7;
+  --bg-1:#ffffff;
+  --bg-2:#f9f9fb;
+  --bg-3:#f0f0f4;
+  --bg-4:#e8e8ee;
+  --bg-hover:#e0e0e8;
+
+  --border-0:#ebebf0;
+  --border-1:#d8d8e0;
+  --border-2:#c0c0cc;
+
+  --text-1:#111118;
+  --text-2:#555566;
+  --text-3:#888898;
+
+  --gold:#d48a0a;
+  --gold-dim:#a86d08;
+  --gold-glow:rgba(212,138,10,.12);
+  --gold-text:#92400e;
+
+  --green:#059669;--green-bg:rgba(5,150,105,.08);
+  --red:#dc2626;--red-bg:rgba(220,38,38,.08);
+  --blue:#2563eb;--blue-bg:rgba(37,99,235,.08);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,.08);
+  --cyan:#0891b2;--cyan-bg:rgba(8,145,178,.08);
+  --pink:#db2777;--pink-bg:rgba(219,39,119,.08);
+  --orange:#ea580c;--orange-bg:rgba(234,88,12,.08);
+  --yellow:#ca8a04;--yellow-bg:rgba(202,138,4,.08);
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT SHELL
+   ═══════════════════════════════════════════════════════════ */
+.shell{display:flex;height:100vh}
+
+/* --- SIDEBAR --- */
+.side{width:232px;min-width:232px;background:var(--bg-1);border-right:1px solid var(--border-0);
+  display:flex;flex-direction:column;user-select:none;position:relative;z-index:20}
+.side-head{padding:20px 18px 12px;display:flex;align-items:center;gap:11px}
+.side-logo{width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,#f5a623 0%,#e8590c 100%);
+  display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;
+  box-shadow:0 2px 8px rgba(245,166,35,.3)}
+.side-title{font-size:14px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.side-subtitle{font-size:10.5px;color:var(--text-3);margin-top:1px;letter-spacing:.01em}
+
+.side-nav{flex:1;padding:6px 8px;overflow-y:auto}
+.nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);
+  padding:18px 12px 5px;font-weight:700}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border-radius:9px;
+  font-size:13px;color:var(--text-2);transition:all .12s;margin-bottom:1px;font-weight:450;position:relative}
+.nav-btn:hover{background:var(--bg-hover);color:var(--text-1)}
+.nav-btn.on{background:var(--gold-glow);color:var(--gold-text);font-weight:600}
+.nav-btn.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;background:var(--gold);border-radius:0 3px 3px 0}
+.nav-btn svg{width:17px;height:17px;flex-shrink:0;opacity:.55}
+.nav-btn.on svg{opacity:1}
+.nav-badge{margin-left:auto;min-width:20px;text-align:center;font-size:10px;font-weight:700;
+  padding:1px 6px;border-radius:10px;background:var(--gold-glow);color:var(--gold)}
+
+.side-foot{padding:10px 18px 16px;border-top:1px solid var(--border-0)}
+.side-foot button{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text-3);
+  padding:6px 0;transition:color .15s}
+.side-foot button:hover{color:var(--text-2)}
+.side-foot button svg{width:14px;height:14px}
+
+/* --- MAIN --- */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
+.content-inner{max-width:960px;margin:0 auto;padding:28px 36px 60px}
+
+.pg{display:none;animation:pgIn .22s ease}
+.pg.on{display:block}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.pg-head{margin-bottom:28px}
+.pg-head h2{font-size:21px;font-weight:700;letter-spacing:-.03em}
+.pg-head p{font-size:12.5px;color:var(--text-3);margin-top:3px}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPONENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* --- CARD --- */
+.card{background:var(--bg-1);border:1px solid var(--border-0);border-radius:14px;padding:22px;transition:border-color .2s}
+.card:hover{border-color:var(--border-1)}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-h h3{font-size:13.5px;font-weight:650}
+.card + .card{margin-top:14px}
+
+/* --- BUTTONS --- */
+.btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;transition:all .12s;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn svg{width:15px;height:15px}
+
+.btn-gold{background:var(--gold);color:#000}
+.btn-gold:hover{background:var(--gold-dim);box-shadow:0 2px 12px rgba(245,166,35,.3)}
+.btn-out{background:transparent;border:1px solid var(--border-1);color:var(--text-2)}
+.btn-out:hover{border-color:var(--border-2);color:var(--text-1);background:var(--bg-3)}
+.btn-ghost{color:var(--text-3);padding:8px 12px}
+.btn-ghost:hover{color:var(--text-1);background:var(--bg-3);border-radius:8px}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.btn-danger{color:var(--red)}
+.btn-danger:hover{background:var(--red-bg)}
+
+/* --- BADGE / TAG --- */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;
+  font-size:10.5px;font-weight:650;letter-spacing:.02em;text-transform:uppercase}
+
+/* --- QUALITY METER --- */
+.meter{height:4px;background:var(--bg-4);border-radius:3px;overflow:hidden;flex:1}
+.meter-fill{height:100%;border-radius:3px;transition:width .4s ease,background .3s}
+
+/* ═══════════════════════════════════════════════════════════
+   WORKSHOP PAGE
+   ═══════════════════════════════════════════════════════════ */
+.ws-input{position:relative;margin-bottom:18px}
+.ws-input textarea{width:100%;min-height:150px;font-size:13px;line-height:1.75;padding:18px;
+  background:var(--bg-2);border:1.5px solid var(--border-1);border-radius:14px;
+  transition:border-color .2s,box-shadow .2s}
+.ws-input textarea:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-glow)}
+.ws-input textarea::placeholder{color:var(--text-3)}
+.ws-input .hint{position:absolute;bottom:10px;right:14px;font-size:10.5px;color:var(--text-3);
+  pointer-events:none;opacity:.7}
+
+.ws-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+.ws-bar select{padding:9px 36px 9px 12px;border-radius:9px;font-size:13px;font-weight:500;
+  appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236e6e80' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;min-width:155px;cursor:pointer}
+.ws-spacer{flex:1}
+
+/* Analysis panel */
+.ws-analysis{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:860px){.ws-analysis{grid-template-columns:1fr}}
+
+.det-type{display:flex;align-items:center;gap:11px;padding:12px 14px;
+  background:var(--bg-3);border-radius:10px;margin-bottom:14px}
+.det-icon{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;
+  font-size:17px;font-weight:800;flex-shrink:0}
+.det-name{font-size:13.5px;font-weight:650}
+.det-conf{font-size:10.5px;color:var(--text-3);margin-top:1px}
+
+.sig-list{list-style:none;font-size:12px;color:var(--text-2)}
+.sig-list li{padding:3px 0;display:flex;align-items:center;gap:7px}
+.sig-list li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--gold);flex-shrink:0}
+
+.fw-box{background:var(--bg-3);border-radius:10px;padding:16px}
+.fw-formula{font-size:14.5px;font-weight:700;color:var(--gold-text);margin-bottom:5px;letter-spacing:-.01em}
+.fw-text{font-size:12.5px;color:var(--text-2);line-height:1.65}
+
+/* Comment output */
+.cm-tabs{display:flex;gap:3px;background:var(--bg-3);border-radius:10px;padding:3px;margin-bottom:14px}
+.cm-tab{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;
+  color:var(--text-3);transition:all .12s;cursor:pointer}
+.cm-tab:hover{color:var(--text-2)}
+.cm-tab.on{background:var(--bg-1);color:var(--text-1);box-shadow:var(--shadow-sm)}
+
+.cm-editor textarea{width:100%;min-height:130px;font-size:13px;line-height:1.75;padding:16px;
+  border-radius:12px;border:1.5px solid var(--border-1);background:var(--bg-2)}
+.cm-editor textarea:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-glow)}
+
+.cm-meta{display:flex;align-items:center;gap:20px;padding:10px 2px;font-size:11.5px;color:var(--text-3);flex-wrap:wrap}
+.cm-meta .warn{color:var(--yellow)}.cm-meta .danger{color:var(--red)}
+
+.cm-quality{display:flex;align-items:center;gap:10px;flex:1;max-width:260px}
+.cm-quality-label{font-size:11px;font-weight:600;white-space:nowrap}
+
+.cm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+
+/* Humanizer checklist */
+.hm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:7px;margin-top:14px}
+.hm-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text-2);
+  padding:8px 11px;background:var(--bg-3);border-radius:8px;cursor:pointer;transition:all .12s;
+  border:1px solid transparent}
+.hm-item:hover{border-color:var(--border-1)}
+.hm-item.pass{color:var(--green);background:var(--green-bg);border-color:transparent}
+.hm-item.fail{color:var(--red);background:var(--red-bg);border-color:transparent}
+.hm-dot{width:7px;height:7px;border-radius:50%;background:var(--border-2);flex-shrink:0;transition:background .15s}
+.hm-item.pass .hm-dot{background:var(--green)}
+.hm-item.fail .hm-dot{background:var(--red)}
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-bottom:22px}
+.stat{background:var(--bg-1);border:1px solid var(--border-0);border-radius:12px;padding:18px;transition:all .15s}
+.stat:hover{border-color:var(--border-1);transform:translateY(-1px)}
+.stat-label{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.stat-val{font-size:28px;font-weight:800;margin:5px 0 2px;letter-spacing:-.04em;line-height:1.1}
+.stat-sub{font-size:10.5px;color:var(--text-3)}
+.stat-bar{height:3px;background:var(--bg-4);border-radius:2px;margin-top:12px;overflow:hidden}
+.stat-bar-f{height:100%;border-radius:2px;transition:width .6s ease}
+
+.streak-card{display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--bg-2);
+  border-radius:12px;margin-bottom:22px;border:1px solid var(--border-0)}
+.streak-fire{font-size:32px;line-height:1}
+.streak-num{font-size:22px;font-weight:800;color:var(--gold-text)}
+.streak-text{font-size:12px;color:var(--text-3)}
+
+/* ═══════════════════════════════════════════════════════════
+   PLAYBOOK
+   ═══════════════════════════════════════════════════════════ */
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.pb-card{background:var(--bg-1);border:1px solid var(--border-0);border-radius:14px;
+  padding:20px;transition:all .18s;cursor:pointer;position:relative;overflow:hidden}
+.pb-card:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.pb-card::after{content:'Use this';position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;
+  color:var(--gold);opacity:0;transition:opacity .15s;text-transform:uppercase;letter-spacing:.06em}
+.pb-card:hover::after{opacity:1}
+.pb-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
+  font-size:16px;font-weight:800;margin-bottom:14px}
+.pb-card h3{font-size:14px;font-weight:650;margin-bottom:5px}
+.pb-card p{font-size:12px;color:var(--text-2);line-height:1.55}
+.pb-formula{margin-top:14px;display:inline-block;font-size:10.5px;font-weight:700;
+  padding:4px 10px;border-radius:6px;background:var(--gold-glow);color:var(--gold-text)}
+
+/* ═══════════════════════════════════════════════════════════
+   HISTORY
+   ═══════════════════════════════════════════════════════════ */
+.hi-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.hi-search{flex:1;min-width:180px;max-width:300px}
+.hi-search input{width:100%;padding:8px 12px 8px 34px;font-size:12.5px;border-radius:8px;
+  background:var(--bg-3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e80' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") 11px center no-repeat}
+.hi-pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{padding:5px 12px;font-size:11.5px;border-radius:7px;background:var(--bg-3);
+  color:var(--text-3);border:1px solid transparent;transition:all .12s;cursor:pointer;font-weight:550}
+.pill:hover{color:var(--text-2);border-color:var(--border-1)}
+.pill.on{border-color:var(--gold);color:var(--gold);background:var(--gold-glow)}
+
+.hi-item{background:var(--bg-1);border:1px solid var(--border-0);border-radius:12px;
+  padding:18px;margin-bottom:8px;transition:border-color .15s}
+.hi-item:hover{border-color:var(--border-1)}
+.hi-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:11.5px;flex-wrap:wrap}
+.hi-top .date{margin-left:auto;color:var(--text-3);font-variant-numeric:tabular-nums}
+.hi-text{font-size:13px;line-height:1.65;color:var(--text-2);margin-bottom:10px;
+  white-space:pre-wrap;word-break:break-word}
+.hi-preview{font-size:11.5px;color:var(--text-3);padding:10px 14px;
+  background:var(--bg-3);border-radius:8px;border-left:3px solid var(--border-1);
+  max-height:52px;overflow:hidden;line-height:1.5}
+.hi-actions{display:flex;gap:6px;margin-top:10px}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text-3)}
+.empty-big{font-size:42px;margin-bottom:14px;opacity:.2;font-weight:200}
+.empty h3{font-size:15px;color:var(--text-2);margin-bottom:4px;font-weight:600}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════════════════ */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:11px;font-size:12.5px;font-weight:600;
+  box-shadow:var(--shadow-lg);animation:tIn .25s ease;display:flex;align-items:center;gap:8px;max-width:340px}
+.toast-ok{background:var(--green);color:#000}
+.toast-err{background:var(--red);color:#fff}
+.toast-info{background:var(--blue);color:#fff}
+@keyframes tIn{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tOut{from{opacity:1}to{opacity:0;transform:translateY(-6px)}}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITY
+   ═══════════════════════════════════════════════════════════ */
+.mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.hidden{display:none!important}
+.flex{display:flex}.aic{align-items:center}.g8{gap:8px}.g12{gap:12px}
+.f1{flex:1}
+.tsm{font-size:12px}.txs{font-size:11px}.tc3{color:var(--text-3)}.tc2{color:var(--text-2)}
+.fw6{font-weight:600}.fw7{font-weight:700}
+
+.divider{height:1px;background:var(--border-0);margin:22px 0}
+
+.kbd{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;
+  font-size:10px;font-weight:600;background:var(--bg-4);border:1px solid var(--border-1);color:var(--text-3)}
+
+/* Responsive */
+@media(max-width:700px){
+  .side{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);z-index:50;
+    box-shadow:var(--shadow-lg);transition:transform .25s}
+  .side.open{transform:none}
+  .content-inner{padding:20px 16px 60px}
+  .ws-analysis{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<aside class="side" id="sidebar">
+  <div class="side-head">
+    <div class="side-logo">G</div>
+    <div>
+      <div class="side-title">Goldie Bro</div>
+      <div class="side-subtitle">Comment Engine v1.0</div>
+    </div>
+  </div>
+
+  <nav class="side-nav">
+    <div class="nav-label">Workspace</div>
+    <button class="nav-btn on" data-pg="workshop">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      Workshop
+    </button>
+    <button class="nav-btn" data-pg="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      Dashboard
+    </button>
+
+    <div class="nav-label">Reference</div>
+    <button class="nav-btn" data-pg="playbook">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Playbook
+      <span class="nav-badge">8</span>
+    </button>
+    <button class="nav-btn" data-pg="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+      <span class="nav-badge" id="hBadge">0</span>
+    </button>
+  </nav>
+
+  <div class="side-foot">
+    <button onclick="toggleTheme()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+      <span id="themeText">Switch to light</span>
+    </button>
+    <button onclick="exportHistory()" class="mt4">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export data
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════ CONTENT ═══════════════════ -->
+<div class="content">
+<div class="content-inner">
+
+<!-- ────────── WORKSHOP ────────── -->
+<div class="pg on" id="pg-workshop">
+  <div class="pg-head">
+    <h2>Comment Workshop</h2>
+    <p>Paste a LinkedIn post. Get 3 humanized comments ready to copy. <span class="kbd" style="margin-left:4px">Cmd+Enter</span></p>
+  </div>
+
+  <div class="ws-input">
+    <textarea id="postIn" placeholder="Paste the LinkedIn post here...
+
+Include the full post text with any numbers, questions, or key details.
+The more context you paste, the more specific the generated comment will be." rows="7"></textarea>
+    <div class="hint">Cmd + Enter to analyze</div>
+  </div>
+
+  <div class="ws-bar">
+    <select id="selTier">
+      <option value="auto">Auto-detect tier</option>
+      <option value="gold">Tier 1 - Gold (Freelancer)</option>
+      <option value="silver">Tier 2 - Silver (Agency)</option>
+      <option value="bronze">Tier 3 - Bronze (Web Pro)</option>
+      <option value="strategic">Tier 4 - Strategic</option>
+      <option value="reciprocal">Tier 5 - Reciprocal</option>
+    </select>
+    <select id="selTone">
+      <option value="balanced">Balanced</option>
+      <option value="empathetic">Empathetic</option>
+      <option value="authoritative">Authoritative</option>
+      <option value="casual">Casual</option>
+      <option value="contrarian">Contrarian</option>
+    </select>
+    <button class="btn btn-gold" onclick="doAnalyze()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      Analyze &amp; Generate
+    </button>
+    <div class="ws-spacer"></div>
+    <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+  </div>
+
+  <!-- Analysis -->
+  <div id="secAnalysis" class="hidden">
+    <div class="ws-analysis">
+      <div class="card">
+        <div class="card-h"><h3>Post analysis</h3></div>
+        <div id="detType"></div>
+        <div class="mt12"><div class="txs tc3 mb8 fw6">Signals detected</div><ul class="sig-list" id="sigList"></ul></div>
+        <div class="mt16"><div class="txs tc3 mb8 fw6">Stats</div><div id="postStats" class="tsm tc2"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Recommended framework</h3></div>
+        <div class="fw-box" id="fwBox"></div>
+        <div class="mt16"><div class="txs tc3 mb8 fw6">Approach for this tier</div>
+        <p id="approachP" class="tsm tc2" style="line-height:1.6"></p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div id="secOutput" class="hidden">
+    <div class="card">
+      <div class="card-h">
+        <h3>Generated comments</h3>
+        <button class="btn btn-sm btn-out" onclick="regenComments()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          Regenerate
+        </button>
+      </div>
+      <div class="cm-tabs" id="cmTabs"></div>
+      <div class="cm-editor"><textarea id="cmOut" rows="5"></textarea></div>
+      <div class="cm-meta">
+        <span id="charCt">0 chars</span>
+        <span id="sentCt">0 sentences</span>
+        <div class="cm-quality">
+          <span class="cm-quality-label" id="qualLabel">Quality</span>
+          <div class="meter"><div class="meter-fill" id="qualBar" style="width:0;background:var(--green)"></div></div>
+        </div>
+      </div>
+      <div class="cm-actions">
+        <button class="btn btn-gold" onclick="copyComment()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy to clipboard
+        </button>
+        <button class="btn btn-out" onclick="saveComment()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+          Save to history
+        </button>
+      </div>
+    </div>
+
+    <div class="card mt16">
+      <div class="card-h"><h3>Humanizer checklist</h3></div>
+      <div class="hm-grid" id="hmGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── DASHBOARD ────────── -->
+<div class="pg" id="pg-dashboard">
+  <div class="pg-head"><h2>Dashboard</h2><p>Your commenting activity and engagement metrics.</p></div>
+  <div id="streakCard"></div>
+  <div class="stats-row" id="statsRow"></div>
+  <div class="card"><div class="card-h"><h3>Today's comments</h3><span class="txs tc3" id="todayLbl"></span></div><div id="todayList"></div></div>
+</div>
+
+<!-- ────────── PLAYBOOK ────────── -->
+<div class="pg" id="pg-playbook">
+  <div class="pg-head"><h2>Comment playbook</h2><p>8 proven frameworks. Click any card to load it in the Workshop.</p></div>
+  <div class="pb-grid" id="pbGrid"></div>
+</div>
+
+<!-- ────────── HISTORY ────────── -->
+<div class="pg" id="pg-history">
+  <div class="pg-head"><h2>History</h2><p>All saved comments. Search, filter, reuse.</p></div>
+  <div class="hi-bar" id="hiBar"></div>
+  <div id="hiList"></div>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════════════ */
+const TYPES={
+  struggle:{name:'Struggle / Rant',icon:'!',c:'var(--red)',bg:'var(--red-bg)',
+    kw:['frustrated','struggling','failed','rejected','no replies','ghosted','giving up','stuck',
+    'burned out','burnout','zero hires','no interviews','wasting','hate','terrible','broken',
+    'impossible','depressing','hopeless','losing','declined','dispute','low rate','underpaid','exhausting','quit'],
+    formula:'Empathy + Insight + Question',
+    tip:'Validate the feeling. Drop one actionable insight they can use today. End with a question that opens a real conversation.'},
+  achievement:{name:'Achievement / Win',icon:'W',c:'var(--green)',bg:'var(--green-bg)',
+    kw:['just hit','milestone','top rated','finally','promoted','earned','achieved','badge',
+    'celebration','proud','excited','landed','won','accepted','100%','jss','rising talent',
+    'expert-vetted','five star','5 star','congratulations','celebrate'],
+    formula:'Specific congrats + Pattern + Forward question',
+    tip:'Reference their actual numbers. Connect it to what this unlocks for them next. Ask about their plan going forward.'},
+  question:{name:'Question / Advice',icon:'?',c:'var(--blue)',bg:'var(--blue-bg)',
+    kw:['how do i','should i','what is the','would you','can anyone','advice','recommend',
+    'suggestion','help me','tips for','best way to','which one','thoughts on','opinions on','wondering'],
+    formula:'Direct answer + Evidence + Deeper question',
+    tip:'Answer without hedging. Support it with data or real experience. Push their thinking one level deeper.'},
+  technical:{name:'Technical / How-to',icon:'T',c:'var(--gold)',bg:'var(--gold-glow)',
+    kw:['my process','step by step','tutorial','how to','guide','template','workflow','framework',
+    'system','method','approach','strategy','setup','configure','build','implement','deploy','automation'],
+    formula:'Acknowledge + Add nuance + Real example',
+    tip:'Respect their work. Add a nuance or edge case they missed. Connect it to something you have actually seen in practice.'},
+  opinion:{name:'Opinion / Hot Take',icon:'!',c:'var(--orange)',bg:'var(--orange-bg)',
+    kw:['hot take','unpopular opinion','controversial','i think','change my mind','disagree',
+    'overrated','underrated','stop doing','never do','always do','truth is','reality is',
+    'nobody talks about','myth','wrong about','unpopoular'],
+    formula:'Position + Reasoning + Alternative angle',
+    tip:'State your position clearly. Give specific reasoning, not vague agreement. Present the edge case.'},
+  casestudy:{name:'Case Study / Results',icon:'%',c:'var(--cyan)',bg:'var(--cyan-bg)',
+    kw:['increased','decreased','grew','growth','results','before and after','before/after',
+    'transformation','case study','revenue','roi','conversion','percent','doubled','tripled',
+    'went from','data shows','metrics','analytics','benchmark'],
+    formula:'Highlight metric + Connect experience + Ask methodology',
+    tip:'Call out the specific number. Validate from your own tracking. Ask about the hidden variable they did not share.'},
+  hiring:{name:'Hiring / Scaling',icon:'+',c:'var(--pink)',bg:'var(--pink-bg)',
+    kw:['hiring','looking for','open position','remote role','join our team','we are hiring',
+    'need a','seeking','talent','recruit','team member','developer needed','designer needed',
+    'contractor','freelancer needed','job opening'],
+    formula:'Market perspective + Insight + Question',
+    tip:'Show you understand the talent market from both sides. Offer a perspective they had not considered.'},
+  industry:{name:'Industry / News',icon:'N',c:'var(--purple)',bg:'var(--purple-bg)',
+    kw:['algorithm','update','changed','new feature','announcement','trend','report','study',
+    'research','platform','policy','market shift','industry','future','prediction','2025','2026',
+    'ai ','artificial intelligence','layoff','economy','regulation'],
+    formula:'Context + Your take + What to do',
+    tip:'Translate the news into practical impact. Add a contrarian or supportive angle. Tell people what they should actually do.'}
+};
+
+const TIERS={
+  gold:{name:'Gold',label:'T1',c:'var(--gold)',bg:'var(--gold-glow)',desc:'Freelancer'},
+  silver:{name:'Silver',label:'T2',c:'#94a3b8',bg:'rgba(148,163,184,.1)',desc:'Agency'},
+  bronze:{name:'Bronze',label:'T3',c:'var(--orange)',bg:'var(--orange-bg)',desc:'Web Pro'},
+  strategic:{name:'Strategic',label:'T4',c:'var(--purple)',bg:'var(--purple-bg)',desc:'Big Account'},
+  reciprocal:{name:'Reciprocal',label:'T5',c:'var(--cyan)',bg:'var(--cyan-bg)',desc:'Engager'}
+};
+
+const HM_CHECKS=[
+  {l:'No em dashes',fn:t=>!t.includes('\u2014')&&!t.includes(' -- ')},
+  {l:'No AI vocabulary',fn:t=>{const w=['delve','foster','leverage','landscape','tapestry','utilize','garner','underscore','interplay','intricate','showcase','enhance','crucial','pivotal','groundbreaking','additionally','furthermore','moreover'];return!w.some(x=>t.toLowerCase().includes(x))}},
+  {l:'No emojis',fn:t=>!/[\u{1F300}-\u{1F9FF}]/u.test(t)},
+  {l:'2+ sentences',fn:t=>(t.match(/[.!?]+/g)||[]).length>=2},
+  {l:'Under 7 sentences',fn:t=>(t.match(/[.!?]+/g)||[]).length<=7},
+  {l:'Specific reference',fn:()=>null},
+  {l:'Ends with question',fn:t=>t.trim().endsWith('?')},
+  {l:'No generic praise',fn:t=>{const g=['great post','thanks for sharing','love this','so true','amazing post','nice post','well said'];return!g.some(x=>t.toLowerCase().includes(x))}},
+  {l:'No "As a [role]"',fn:t=>!/^as a /i.test(t.trim())},
+  {l:'Varied sentence length',fn:t=>{const s=t.split(/[.!?]+/).filter(x=>x.trim());if(s.length<2)return null;const lens=s.map(x=>x.trim().split(/\s+/).length);return Math.max(...lens)-Math.min(...lens)>=3}}
+];
+
+/* ═══════════════════════════════════════════════════════════
+   TEMPLATES (3 per type)
+   ═══════════════════════════════════════════════════════════ */
+const TPL={
+  struggle:[
+    c=>`${c.num?'That '+c.num+' actually tells me':'That ratio tells me'} the issue is probably targeting, not your skills. I see this a lot. When you apply to jobs with 50+ proposals already, even a great proposal gets buried. What does your job filter look like? Narrowing to jobs posted in the last 2 hours with under 10 proposals changed everything for people I work with.`,
+    c=>`The frustration makes sense. But most people in this spot blame their skills when it is almost always a positioning problem. I have tracked this across multiple profiles and the pattern is consistent: same person, same skills, different positioning, completely different outcome. Have you looked at what keywords your profile actually ranks for versus what jobs you are targeting?`,
+    c=>`Here is what nobody tells you about this: the people who succeed are not necessarily more skilled. They are more specific. Generalists compete with thousands. Specialists compete with dozens. That shift from "I can do anything" to "I solve this one problem better than anyone" is usually where things flip. What is the one thing clients keep coming back to you for?`
+  ],
+  achievement:[
+    c=>`${c.num?c.num+' is solid.':'Solid achievement.'} The real unlock now is using this momentum to justify a rate increase. Clients filter by credibility signals like this, so demand for your profile just went up. Have you adjusted your rate since hitting this? That is usually the highest-leverage move right after.`,
+    c=>`Most people take way longer to get here. The consistency it takes to maintain this kind of track record is what separates the top from the middle. What was the actual turning point for you? I track what makes the difference at your level and I am curious if it matches what I am seeing.`,
+    c=>`This is going to compound. Credibility signals like this create a flywheel: better clients find you, better projects come in, reviews strengthen, rates go up. The people who capitalize fastest are the ones who immediately specialize deeper right after hitting a milestone like this. Is that something you are thinking about?`
+  ],
+  question:[
+    c=>`Specialize. Every time. Broad profiles compete with 10,000 generalists. Specialized ones compete with maybe 200. I have tracked this across multiple profiles and the specialized ones consistently pull 3x more invitations. The fear is missing jobs, but the reality is you start winning the ones you apply to. What is the one thing clients keep hiring you for?`,
+    c=>`This depends on your revenue mix and where your strongest reviews come from. If your top reviews all mention the same skill, that is the market telling you where to double down. Fighting that signal rarely works. What do your best 3 client reviews have in common?`,
+    c=>`The textbook answer and the real answer are different here. What actually works depends on your specific niche and where you are in terms of earnings. Before following generic advice, look at the top 5 people in your exact space. Study what they do. That is your real playbook. Have you mapped your direct competitors?`
+  ],
+  technical:[
+    c=>`Good breakdown, especially the part about the process structure. One thing I would add: also check the client's past review history, not just the current job post. Their reviews reveal what they actually care about. That one data point can completely shift your approach. Found this working across several profiles.`,
+    c=>`This works well for the standard scenario. Where it breaks down is with first-time clients who have zero reviews. The signals you are reading simply do not exist yet, so you need a different evaluation method for that situation. Have you noticed different patterns with new versus experienced clients?`,
+    c=>`Solid framework. The step that makes the biggest difference in my tracking is the one most people rush through. When you slow down on that part and get it right, everything downstream works better. One detail worth adding: always validate assumptions against actual data before committing to the approach. Saves a lot of rework.`
+  ],
+  opinion:[
+    c=>`This is right, and the implication is bigger than most people realize. The conventional wisdom on this topic has been outdated for at least a year. People still following the old playbook are leaving money on the table. The part most miss: the rules changed but nobody sent a memo. What made you realize this?`,
+    c=>`I see this differently. In my experience, the opposite approach works better for a specific group of people. Not saying your take is wrong for everyone, but there is a variable most people ignore when making this call. What has been your experience when you factor in the client's history and not just the surface signals?`,
+    c=>`Both sides of this are right, which is what makes it an interesting discussion. For one group, your take is spot on. For another, the opposite holds. The mistake is treating it as universal when it is actually context-dependent. The key variable is one most people never bother to check. Where does your experience fall?`
+  ],
+  casestudy:[
+    c=>`${c.num?c.num+' is':'That result is'} not incremental. That is a full repositioning. The speed of the change is what stands out to me. It lines up with patterns I have tracked across similar situations. Did you notice a shift in the quality of clients and opportunities that came your way after? That second-order effect is usually where the real value lands.`,
+    c=>`Strong results. What I am curious about is the part you did not share. There is usually a hidden variable that determines whether gains like these stick long-term or slowly regress. The people who keep the improvement are the ones who built a system around it, not just a one-time fix. How are you maintaining this?`,
+    c=>`For context, most people in this space are not even close to these numbers. You are in a small group. The question now is whether the next level of growth needs the same approach or something fundamentally different. Usually the strategy that gets you from A to B is not the one that gets you from B to C. What is your next target?`
+  ],
+  hiring:[
+    c=>`The hard part with this kind of hire right now is that the strongest candidates already have stable contracts paying well with flexible hours. They are not browsing posts. If you are open to contract-based engagement instead of full-time, you tap a completely different and often stronger talent pool. What is your timeline here?`,
+    c=>`Hiring is the easy part. Keeping strong remote talent when they have 10 other options is where it gets real. The teams I see retain people longest have one thing in common: they treat onboarding like a product launch, not an afterthought. What does the first week look like for someone joining your team?`,
+    c=>`At your stage, the biggest growth lever is usually better positioning of current capacity, not more people. Adding headcount without a stronger pipeline just raises your burn. Worth asking: is the bottleneck actually talent, or is it deal flow? How is your project pipeline looking relative to what the team can handle?`
+  ],
+  industry:[
+    c=>`Here is what this actually changes for most people on a daily basis: probably less than the headlines suggest. Every time something like this shifts, the people who benefit are the ones who were already doing the fundamentals right. If your foundation is solid, this is noise. If it is not, this is a wake-up call.`,
+    c=>`This is not the first time we have seen this pattern. The initial reaction is always bigger than the actual impact. The winners are the ones who adapt calmly instead of panic-pivoting everything. What specifically are you planning to change in response, if anything?`,
+    c=>`Most people are reading this one way, but I think the real story is different. The obvious interpretation misses a key detail. If I am right, the smart play is doing the opposite of what everyone is rushing toward. The downside of being wrong is small, but the upside of being right is significant. What is your read?`
+  ]
+};
+
+/* ═══════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════ */
+let S={history:[],comments:[],activeIdx:0,postType:null,postText:'',tier:'auto'};
+
+function load(){try{const d=JSON.parse(localStorage.getItem('gce')||'{}');S.history=d.history||[]}catch(e){}}
+function save(){localStorage.setItem('gce',JSON.stringify({history:S.history}))}
+
+/* ═══════════════════════════════════════════════════════════
+   ANALYSIS ENGINE
+   ═══════════════════════════════════════════════════════════ */
+function analyzeText(text){
+  const lo=text.toLowerCase(),nums=text.match(/\$?\d[\d,.]*/g)||[],qs=text.match(/[^.!]*\?/g)||[];
+  const words=text.split(/\s+/).length,sents=text.split(/[.!?]+/).filter(s=>s.trim()).length;
+  let best='struggle',maxS=0,allScores={};
+  for(const[k,v]of Object.entries(TYPES)){
+    let sc=0;const matched=[];
+    v.kw.forEach(w=>{if(lo.includes(w)){sc+=w.split(' ').length;matched.push(w)}});
+    if(k==='question'&&qs.length)sc+=3;
+    if(k==='casestudy'&&nums.length>=2)sc+=2;
+    allScores[k]={sc,matched};
+    if(sc>maxS){maxS=sc;best=k}
+  }
+  if(!maxS){best=qs.length?'question':nums.length>=2?'casestudy':'technical'}
+  return{type:best,conf:maxS>=4?'High':maxS>=2?'Medium':'Low',
+    signals:allScores[best]?.matched||[],nums,qs,words,sents,chars:text.length}
+}
+
+function guessTier(text){
+  const lo=text.toLowerCase();
+  if(/upwork|proposal|freelanc|hourly rate|jss|top rated|badge|connect/.test(lo))return'gold';
+  if(/agency|team|hiring|scale|founder|startup|company/.test(lo))return'silver';
+  if(/developer|designer|engineer|remote work|side project|portfolio/.test(lo))return'bronze';
+  return'gold';
+}
+
+function genComments(text,type,tone){
+  const ctx={num:(text.match(/\$?\d[\d,.]*/g)||[])[0]||null,text};
+  return(TPL[type]||TPL.struggle).map(fn=>{
+    let c=fn(ctx);
+    if(tone==='empathetic'&&!/hear you|frustrat|makes sense/.test(c))c='I hear you on this. '+c;
+    if(tone==='contrarian'&&!/differ|opposite/.test(c))c='Honest take: '+c;
+    if(tone==='authoritative')c=c.replace(/might be/g,'is').replace(/probably/g,'almost certainly');
+    if(tone==='casual')c=c.replace(/In my experience,/g,'From what I have seen,').replace(/consistently/g,'pretty much always');
+    return c;
+  });
+}
+
+function qualityScore(text){
+  let score=0,total=0;
+  HM_CHECKS.forEach(ch=>{const r=ch.fn(text);if(r!==null){total++;if(r)score++}});
+  return total?Math.round(score/total*100):50;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════ */
+function goTo(pg){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+pg)?.classList.add('on');
+  document.querySelector(`.nav-btn[data-pg="${pg}"]`)?.classList.add('on');
+  if(pg==='dashboard')renderDash();
+  if(pg==='playbook')renderPB();
+  if(pg==='history')renderHist();
+}
+
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.pg)));
+
+/* ═══════════════════════════════════════════════════════════
+   WORKSHOP ACTIONS
+   ═══════════════════════════════════════════════════════════ */
+function doAnalyze(){
+  const text=document.getElementById('postIn').value.trim();
+  if(!text){toast('Paste a LinkedIn post first.','err');return}
+
+  const a=analyzeText(text);
+  const tier=document.getElementById('selTier').value==='auto'?guessTier(text):document.getElementById('selTier').value;
+  const tone=document.getElementById('selTone').value;
+
+  S.postText=text;S.postType=a.type;S.tier=tier;
+
+  const T=TYPES[a.type];
+  document.getElementById('detType').innerHTML=`
+    <div class="det-type"><div class="det-icon" style="background:${T.bg};color:${T.c}">${T.icon}</div>
+    <div><div class="det-name">${T.name}</div><div class="det-conf">Confidence: ${a.conf}</div></div></div>`;
+
+  const sl=document.getElementById('sigList');
+  sl.innerHTML=a.signals.length?a.signals.slice(0,6).map(s=>`<li>"${esc(s)}"</li>`).join(''):'<li>No strong keyword signals (heuristic match)</li>';
+
+  document.getElementById('postStats').innerHTML=`
+    ${a.words} words / ${a.sents} sentences / ${a.chars} characters<br>
+    ${a.nums.length} numbers / ${a.qs.length} questions<br>
+    Tier: <span style="color:${TIERS[tier].c};font-weight:700">${TIERS[tier].name}</span> (${TIERS[tier].desc})`;
+
+  document.getElementById('fwBox').innerHTML=`<div class="fw-formula">${T.formula}</div><div class="fw-text">${T.tip}</div>`;
+  document.getElementById('approachP').textContent=
+    `For ${TIERS[tier].name}-tier accounts posting ${T.name.toLowerCase()} content, your comment should demonstrate expertise fast. Reference something specific from their post, deliver unexpected value, and close with a hook that makes the author want to reply.`;
+
+  S.comments=genComments(text,a.type,tone);S.activeIdx=0;
+  renderTabs();renderOutput();renderHM();
+
+  document.getElementById('secAnalysis').classList.remove('hidden');
+  document.getElementById('secOutput').classList.remove('hidden');
+  document.getElementById('secOutput').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function renderTabs(){
+  document.getElementById('cmTabs').innerHTML=S.comments.map((_,i)=>
+    `<div class="cm-tab ${i===S.activeIdx?'on':''}" onclick="switchTab(${i})">Option ${i+1}</div>`).join('');
+}
+function switchTab(i){
+  S.comments[S.activeIdx]=document.getElementById('cmOut').value;
+  S.activeIdx=i;renderTabs();renderOutput();renderHM();
+}
+function renderOutput(){
+  document.getElementById('cmOut').value=S.comments[S.activeIdx]||'';
+  updMeta();
+}
+function updMeta(){
+  const t=document.getElementById('cmOut').value;
+  const ch=t.length,se=(t.match(/[.!?]+/g)||[]).length;
+  const cc=document.getElementById('charCt');
+  cc.textContent=ch+' chars';cc.className=ch>1500?'danger':ch>1000?'warn':'';
+  document.getElementById('sentCt').textContent=se+' sentences';
+  const q=qualityScore(t);
+  document.getElementById('qualLabel').textContent='Quality '+q+'%';
+  const bar=document.getElementById('qualBar');
+  bar.style.width=q+'%';
+  bar.style.background=q>=80?'var(--green)':q>=60?'var(--gold)':q>=40?'var(--orange)':'var(--red)';
+}
+function renderHM(){
+  const t=document.getElementById('cmOut').value;
+  document.getElementById('hmGrid').innerHTML=HM_CHECKS.map(ch=>{
+    const r=ch.fn(t);const cls=r===null?'':r?'pass':'fail';
+    return`<div class="hm-item ${cls}" onclick="this.classList.toggle('pass');this.classList.remove('fail')">
+      <div class="hm-dot"></div><span>${ch.l}${r===null?' (manual)':''}</span></div>`;
+  }).join('');
+}
+function regenComments(){
+  if(!S.postType)return;
+  S.comments=genComments(S.postText,S.postType,document.getElementById('selTone').value);
+  S.activeIdx=0;renderTabs();renderOutput();renderHM();toast('Regenerated','ok');
+}
+function clearAll(){
+  document.getElementById('postIn').value='';
+  document.getElementById('secAnalysis').classList.add('hidden');
+  document.getElementById('secOutput').classList.add('hidden');
+  S.comments=[];S.postType=null;S.postText='';
+}
+function copyComment(){
+  const t=document.getElementById('cmOut').value;if(!t)return;
+  navigator.clipboard.writeText(t).then(()=>toast('Copied to clipboard','ok')).catch(()=>{
+    const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
+    document.execCommand('copy');document.body.removeChild(a);toast('Copied','ok')});
+}
+function saveComment(){
+  const cm=document.getElementById('cmOut').value.trim();
+  if(!cm){toast('Nothing to save','err');return}
+  S.history.push({id:Date.now(),date:new Date().toISOString().split('T')[0],
+    time:new Date().toLocaleTimeString(),comment:cm,
+    preview:S.postText.substring(0,300),type:S.postType||'struggle',tier:S.tier||'gold'});
+  save();updBadge();toast('Saved to history','ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+function renderDash(){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('todayLbl').textContent=today;
+  const tc=S.history.filter(h=>h.date===today);
+  const wc=S.history.filter(h=>(new Date()-new Date(h.date))/(864e5)<=7);
+
+  // streak
+  let streak=0,d=new Date();
+  for(let i=0;i<90;i++){
+    const ds=d.toISOString().split('T')[0];
+    if(S.history.some(h=>h.date===ds))streak++;else if(i>0)break;
+    d.setDate(d.getDate()-1);
+  }
+  document.getElementById('streakCard').innerHTML=streak?
+    `<div class="streak-card"><div class="streak-fire">*</div><div><div class="streak-num">${streak}-day streak</div><div class="streak-text">Keep the momentum going. Consistency beats intensity.</div></div></div>`:'';
+
+  const tiers={gold:0,silver:0,bronze:0,strategic:0,reciprocal:0};
+  tc.forEach(c=>{if(tiers[c.tier]!==undefined)tiers[c.tier]++});
+
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat"><div class="stat-label">Today</div><div class="stat-val" style="color:var(--gold)">${tc.length}</div><div class="stat-sub">Target: 12-15</div>
+      <div class="stat-bar"><div class="stat-bar-f" style="width:${Math.min(100,tc.length/15*100)}%;background:var(--gold)"></div></div></div>
+    <div class="stat"><div class="stat-label">This week</div><div class="stat-val">${wc.length}</div><div class="stat-sub">Target: 60-75</div>
+      <div class="stat-bar"><div class="stat-bar-f" style="width:${Math.min(100,wc.length/75*100)}%;background:var(--blue)"></div></div></div>
+    <div class="stat"><div class="stat-label">All time</div><div class="stat-val">${S.history.length}</div><div class="stat-sub">Total saved</div>
+      <div class="stat-bar"><div class="stat-bar-f" style="width:100%;background:var(--green)"></div></div></div>
+    ${Object.entries(tiers).map(([k,v])=>`<div class="stat"><div class="stat-label" style="color:${TIERS[k].c}">${TIERS[k].name}</div><div class="stat-val">${v}</div><div class="stat-sub">${TIERS[k].desc}</div></div>`).join('')}`;
+
+  document.getElementById('todayList').innerHTML=tc.length?tc.map(c=>`
+    <div class="hi-item"><div class="hi-top">
+      <span class="tag" style="background:${TIERS[c.tier]?.bg};color:${TIERS[c.tier]?.c}">${TIERS[c.tier]?.name}</span>
+      <span class="tc3 tsm">${TYPES[c.type]?.name||c.type}</span>
+      <span class="date tc3">${c.time}</span></div>
+      <div class="hi-text">${esc(c.comment)}</div></div>`).join(''):
+    '<div class="empty"><div class="empty-big">0</div><h3>No comments yet today</h3><p>Open the Workshop to get started.</p></div>';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PLAYBOOK
+   ═══════════════════════════════════════════════════════════ */
+function renderPB(){
+  document.getElementById('pbGrid').innerHTML=Object.entries(TYPES).map(([k,v])=>`
+    <div class="pb-card" onclick="useFW('${k}')">
+      <div class="pb-icon" style="background:${v.bg};color:${v.c}">${v.icon}</div>
+      <h3>${v.name}</h3><p>${v.tip}</p>
+      <div class="pb-formula">${v.formula}</div></div>`).join('');
+}
+function useFW(type){
+  goTo('workshop');
+  const text=document.getElementById('postIn').value.trim();
+  if(text){
+    S.postType=type;S.tier=document.getElementById('selTier').value==='auto'?guessTier(text):document.getElementById('selTier').value;
+    const T=TYPES[type];
+    document.getElementById('detType').innerHTML=`<div class="det-type"><div class="det-icon" style="background:${T.bg};color:${T.c}">${T.icon}</div><div><div class="det-name">${T.name}</div><div class="det-conf">Manually selected</div></div></div>`;
+    document.getElementById('fwBox').innerHTML=`<div class="fw-formula">${T.formula}</div><div class="fw-text">${T.tip}</div>`;
+    S.comments=genComments(text,type,document.getElementById('selTone').value);S.activeIdx=0;
+    renderTabs();renderOutput();renderHM();
+    document.getElementById('secAnalysis').classList.remove('hidden');
+    document.getElementById('secOutput').classList.remove('hidden');
+  }
+  toast(TYPES[type].name+' framework loaded','info');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HISTORY
+   ═══════════════════════════════════════════════════════════ */
+let hFilter='all',hSearch='';
+function renderHist(){
+  document.getElementById('hiBar').innerHTML=`
+    <div class="hi-search"><input type="text" placeholder="Search comments..." value="${esc(hSearch)}" oninput="hSearch=this.value;renderHist()"></div>
+    <div class="hi-pills">
+      <div class="pill ${hFilter==='all'?'on':''}" onclick="hFilter='all';renderHist()">All</div>
+      ${Object.entries(TIERS).map(([k,v])=>`<div class="pill ${hFilter===k?'on':''}" onclick="hFilter='${k}';renderHist()" style="${hFilter===k?`border-color:${v.c};color:${v.c}`:''}">${v.name}</div>`).join('')}
+    </div>`;
+
+  let items=[...S.history].reverse();
+  if(hFilter!=='all')items=items.filter(i=>i.tier===hFilter);
+  if(hSearch)items=items.filter(i=>i.comment.toLowerCase().includes(hSearch.toLowerCase()));
+
+  if(!items.length){
+    document.getElementById('hiList').innerHTML='<div class="empty"><div class="empty-big">0</div><h3>No comments found</h3><p>Generate and save comments from the Workshop.</p></div>';return}
+
+  document.getElementById('hiList').innerHTML=items.map(it=>{
+    const idx=S.history.indexOf(it);
+    return`<div class="hi-item"><div class="hi-top">
+      <span class="tag" style="background:${TIERS[it.tier]?.bg};color:${TIERS[it.tier]?.c}">${TIERS[it.tier]?.name||it.tier}</span>
+      <span class="tc3 tsm">${TYPES[it.type]?.name||it.type}</span>
+      <span class="date">${it.date} ${it.time||''}</span></div>
+      <div class="hi-text">${esc(it.comment)}</div>
+      ${it.preview?`<div class="hi-preview">${esc(it.preview.substring(0,200))}${it.preview.length>200?'...':''}</div>`:''}
+      <div class="hi-actions">
+        <button class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText(S.history[${idx}].comment);toast('Copied','ok')">Copy</button>
+        <button class="btn btn-sm btn-ghost" onclick="reuseItem(${idx})">Reuse</button>
+        <button class="btn btn-sm btn-ghost btn-danger" onclick="delItem(${idx})">Delete</button>
+      </div></div>`}).join('');
+}
+function reuseItem(i){
+  const it=S.history[i];if(!it)return;
+  document.getElementById('cmOut').value=it.comment;S.comments[0]=it.comment;S.activeIdx=0;
+  goTo('workshop');document.getElementById('secOutput').classList.remove('hidden');updMeta();renderHM();
+}
+function delItem(i){S.history.splice(i,1);save();renderHist();updBadge();toast('Deleted','info')}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILS
+   ═══════════════════════════════════════════════════════════ */
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function updBadge(){const b=document.getElementById('hBadge');b.textContent=S.history.length;b.style.display=S.history.length?'':'none'}
+
+function toast(msg,type='info'){
+  const c=document.getElementById('toasts'),t=document.createElement('div');
+  t.className='toast toast-'+(type==='ok'?'ok':type==='err'?'err':'info');
+  t.textContent=msg;c.appendChild(t);
+  setTimeout(()=>{t.style.animation='tOut .25s ease forwards';setTimeout(()=>t.remove(),250)},2200);
+}
+
+function toggleTheme(){
+  const h=document.documentElement,n=h.dataset.theme==='dark'?'light':'dark';
+  h.dataset.theme=n;document.getElementById('themeText').textContent='Switch to '+(n==='dark'?'light':'dark');
+  localStorage.setItem('gce-theme',n);
+}
+
+function exportHistory(){
+  if(!S.history.length){toast('No data to export','err');return}
+  const blob=new Blob([JSON.stringify(S.history,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='goldie-comments-'+new Date().toISOString().split('T')[0]+'.json';a.click();
+  toast('Exported '+S.history.length+' comments','ok');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
+load();
+const st=localStorage.getItem('gce-theme');
+if(st){document.documentElement.dataset.theme=st;document.getElementById('themeText').textContent='Switch to '+(st==='dark'?'light':'dark')}
+updBadge();
+
+document.getElementById('cmOut').addEventListener('input',()=>{
+  S.comments[S.activeIdx]=document.getElementById('cmOut').value;updMeta();renderHM();
+});
+document.getElementById('postIn').addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();doAnalyze()}
+});
+</script>
+</body>
+</html>
